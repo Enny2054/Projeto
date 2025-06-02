@@ -1,0 +1,503 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+typedef struct {
+  int codigo;
+  char nome[50];
+  int quantidade;
+  float preco;
+} Produto;
+
+void pausar();
+
+// Função para limpar o Menu
+void limparMenu() {
+#ifdef _WIN32
+  system("cls"); // Para Windows
+#else
+  system("clear"); // Para Linux e macOS
+#endif
+}
+
+// Função para validação de código único
+int codigoExiste(const char *arquivo, int codigo) {
+  Produto p;
+  FILE *f = fopen(arquivo, "rb");
+  if (!f) return 0; // Se não conseguir abrir o arquivo, considera que não existe
+
+  while (fread(&p, sizeof(Produto), 1, f)) {
+    if (p.codigo == codigo) {
+      fclose(f);
+      return 1; // Código encontrado
+    }
+  }
+
+  fclose(f);
+  return 0; // Código não encontrado
+}
+
+
+// Função para adicionar produto
+void adicionarProduto(const char *arquivo) {
+  Produto p;
+  printf("Código: ");
+  scanf("%d", &p.codigo);
+
+  if (codigoExiste(arquivo, p.codigo)) {
+    printf("❌ Já existe um produto com esse código.\n");
+    pausar();
+    return;
+  }
+  printf("Nome: ");
+  scanf(" %[^\n]", p.nome);
+  printf("Quantidade: ");
+  scanf("%d", &p.quantidade);
+  printf("Preço (use ponto como separador decimal): ");
+  scanf("%f", &p.preco);
+  FILE *f = fopen(arquivo, "ab"); // Abre o arquivo em modo ab (append binary)
+  if (!f) {
+    perror("Erro ao abrir o arquivo");
+    return;
+  }
+   size_t escrito = fwrite(&p, sizeof(Produto), 1, f);
+    fclose(f);
+
+    if (escrito == 1) {
+      printf("✅ Produto adicionado com sucesso!\n");
+    } else {
+      printf("❌ Erro ao salvar o produto no arquivo.\n");
+    }
+
+    pausar();
+  }
+
+// Função para listar todos os produtos do arquivo
+void listarProdutos(const char *arquivo) {
+  Produto p;
+  // Abre o arquivo em modo rb (read binary)
+  FILE *f = fopen(arquivo, "rb");
+  if (!f) {
+    perror("Erro ao abrir o arquivo");
+    return;
+  }
+  printf("\n=== ESTOQUE ===\n");
+  while (fread(&p, sizeof(Produto), 1, f)) {
+    printf("Código: %d\nNome: %s\nQuantidade: %d\nPreço: R$%.2f\n\n", p.codigo,
+           p.nome, p.quantidade, p.preco);
+  }
+  fclose(f);
+}
+
+// Função para atualizar produto
+void atualizarProduto(const char *arquivo) {
+  int codigo;
+  int encontrado = 0;
+  Produto p;
+
+  printf("Digite o código do produto que deseja atualizar: ");
+  scanf("%d", &codigo);
+
+  FILE *f = fopen(arquivo, "rb");
+  FILE *temp = fopen("temp.dat", "wb");
+  if (!f || !temp) {
+    perror("Erro ao abrir os arquivos");
+    return;
+  }
+
+  while (fread(&p, sizeof(Produto), 1, f)) {
+    if (p.codigo == codigo) {
+      encontrado = 1;
+      printf("Produto encontrado. Digite os novos dados:\n");
+      printf("Nome: ");
+      scanf(" %[^\n]", p.nome);
+      printf("Quantidade: ");
+      scanf("%d", &p.quantidade);
+      printf("Preço (use ponto como separador decimal): ");
+      scanf("%f", &p.preco);
+    }
+    fwrite(&p, sizeof(Produto), 1, temp);
+  }
+
+  fclose(f);
+  fclose(temp);
+
+  if (!encontrado) {
+    printf("Produto com código %d não encontrado.\n", codigo);
+    remove("temp.dat");
+  } else {
+    remove(arquivo);
+    rename("temp.dat", arquivo);
+    printf("Produto atualizado com sucesso!\n");
+  }
+
+  pausar();
+}
+
+// Função para remover produto
+void removerProduto(const char *arquivo) {
+  int codigo;
+  int encontrado = 0;
+  Produto p;
+
+  printf("Digite o código do produto que deseja remover: ");
+  scanf("%d", &codigo);
+
+  FILE *f = fopen(arquivo, "rb");
+  FILE *temp = fopen("temp.dat", "wb");
+  if (!f || !temp) {
+    perror("Erro ao abrir os arquivos");
+    return;
+  }
+
+  while (fread(&p, sizeof(Produto), 1, f)) {
+    if (p.codigo == codigo) {
+      encontrado = 1;
+      printf("Produto com código %d removido.\n", codigo);
+      continue; // pula a escrita desse produto (remove)
+    }
+    fwrite(&p, sizeof(Produto), 1, temp);
+  }
+
+  fclose(f);
+  fclose(temp);
+
+  if (!encontrado) {
+    printf("Produto com código %d não encontrado.\n", codigo);
+    remove("temp.dat");
+  } else {
+    remove(arquivo);
+    rename("temp.dat", arquivo);
+  }
+
+  pausar();
+}
+
+// Função para buscar produto por código
+void buscarProdutoPorCodigo(const char *arquivo) {
+  int codigo;
+  Produto p;
+  int encontrado = 0;
+
+  printf("Digite o código do produto que deseja buscar: ");
+  scanf("%d", &codigo);
+  limparMenu();
+
+  FILE *f = fopen(arquivo, "rb");
+  if (!f) {
+    perror("Erro ao abrir o arquivo");
+    return;
+  }
+
+  while (fread(&p, sizeof(Produto), 1, f)) {
+    if (p.codigo == codigo) {
+      printf("\n=== PRODUTO ENCONTRADO ===\n");
+      printf("Código: %d\nNome: %s\nQuantidade: %d\nPreço: R$%.2f\n",
+             p.codigo, p.nome, p.quantidade, p.preco);
+      encontrado = 1;
+      break;
+    }
+  }
+  fclose(f);
+
+  if (!encontrado) {
+    printf("Produto com código %d não encontrado.\n", codigo);
+  }
+
+  pausar();
+}
+
+
+//função para realização de vendas
+void realizarVenda(const char *arquivo) {
+  Produto p;
+  int codigo, quantidadeDesejada;
+  float total = 0.0;
+
+  typedef struct {
+    int codigo;
+    int quantidade;
+  } Compra;
+
+  Compra compras[100];
+  int numCompras = 0;
+
+  while (1) {
+  
+    printf("\n=== MENU DE COMPRA ===\n");
+    printf("1 - Adicionar item ao carrinho\n");
+    printf("2 - Remover quantidade de item do carrinho\n");
+    printf("3 - Ver carrinho\n");
+    printf("0 - Finalizar compra\n");
+    printf("Escolha uma opção: ");
+
+    int opcao;
+    scanf("%d", &opcao);
+    limparMenu();
+
+    if (opcao == 0) break;
+
+    switch (opcao) {
+      case 1:
+        // (mesmo código de adicionar item, igual ao anterior)
+        while (1) {
+          printf("\nDigite o código do produto (ou 0 para voltar ao menu): ");
+          scanf("%d", &codigo);
+          limparMenu();
+          if (codigo == 0) break;
+
+          FILE *f = fopen(arquivo, "rb");
+          if (!f) {
+            perror("Erro ao abrir o arquivo");
+            return;
+          }
+
+          int encontrado = 0;
+          while (fread(&p, sizeof(Produto), 1, f)) {
+            if (p.codigo == codigo) {
+              encontrado = 1;
+
+              int quantidadeNoCarrinho = 0;
+              for (int i = 0; i < numCompras; i++) {
+                if (compras[i].codigo == codigo) {
+                  quantidadeNoCarrinho = compras[i].quantidade;
+                  break;
+                }
+              }
+
+              int disponivel = p.quantidade - quantidadeNoCarrinho;
+              printf("Produto: %s\nPreço: R$%.2f\nEstoque disponível: %d\n",
+                     p.nome, p.preco, disponivel);
+
+              if (disponivel <= 0) {
+                limparMenu();
+                printf("Produto esgotado ou já no carrinho em quantidade máxima.\n");
+              } else {
+                printf("Quantidade desejada: ");
+                scanf("%d", &quantidadeDesejada);
+
+                if (quantidadeDesejada <= 0) {
+                  printf("Quantidade inválida.\n");
+                } else if (quantidadeDesejada > disponivel) {
+                  printf("Estoque insuficiente! Máximo possível: %d unidades.\n", disponivel);
+                } else {
+                  int jaExiste = 0;
+                  for (int i = 0; i < numCompras; i++) {
+                    if (compras[i].codigo == codigo) {
+                      compras[i].quantidade += quantidadeDesejada;
+                      total += p.preco * quantidadeDesejada;
+                      jaExiste = 1;
+                      break;
+                    }
+                  }
+                  if (!jaExiste) {
+                    compras[numCompras].codigo = codigo;
+                    compras[numCompras].quantidade = quantidadeDesejada;
+                    numCompras++;
+                    total += p.preco * quantidadeDesejada;
+                  }
+                  limparMenu();
+                  printf("Adicionado ao carrinho!\n");
+                }
+              }
+              break;
+            }
+          }
+
+          fclose(f);
+
+          if (!encontrado) {
+            printf("Produto com código %d não encontrado.\n", codigo);
+          }
+        }
+        break;
+
+      case 2:
+      if (numCompras == 0) {
+        printf("Carrinho vazio. Nada para remover.\n");
+        break;
+      }
+      // Remover quantidade de item do carrinho
+      limparMenu();
+      printf("\nDigite o código do produto a remover do carrinho: ");
+      scanf("%d", &codigo);
+
+      int encontrou = 0;
+      for (int i = 0; i < numCompras; i++) {
+        if (compras[i].codigo == codigo) {
+          encontrou = 1;
+
+          printf("Quantidade no carrinho: %d\n", compras[i].quantidade);
+          printf("Digite a quantidade a remover (0 para remover tudo): ");
+          int qtdRemover;
+          scanf("%d", &qtdRemover);
+          limparMenu();
+
+          if (qtdRemover < 0) {
+            printf("Quantidade inválida.\n");
+            break;
+          } else {
+            FILE *f = fopen(arquivo, "rb");
+            if (!f) {
+              perror("Erro ao abrir o arquivo");
+              return;
+            }
+            float precoProduto = 0.0f;
+            while (fread(&p, sizeof(Produto), 1, f)) {
+              if (p.codigo == codigo) {
+                precoProduto = p.preco;
+                break;
+              }
+            }
+            fclose(f);
+
+            if (qtdRemover == 0 || qtdRemover == compras[i].quantidade) {
+              // remove o item do array e atualiza total
+              total -= precoProduto * compras[i].quantidade;
+              for (int j = i; j < numCompras - 1; j++) {
+                compras[j] = compras[j + 1];
+              }
+              numCompras--;
+            } else if (qtdRemover > compras[i].quantidade) {
+              printf("Você só tem %d unidades no carrinho.\n", compras[i].quantidade);
+              break;
+            } else {
+              total -= precoProduto * qtdRemover;
+              compras[i].quantidade -= qtdRemover;
+            }
+            limparMenu();
+            printf("Quantidade removida do carrinho.\n");
+            break;
+          }
+        }
+      }
+      if (!encontrou) {
+        printf("Produto não encontrado no carrinho.\n");
+      }
+      break;
+
+
+      case 3:
+        if (numCompras == 0) {
+          limparMenu();
+          printf("\nCarrinho vazio.\n");
+        } else {
+          limparMenu();
+          printf("\n=== CARRINHO ===\n");
+          for (int i = 0; i < numCompras; i++) {
+            FILE *f = fopen(arquivo, "rb");
+            while (fread(&p, sizeof(Produto), 1, f)) {
+              if (p.codigo == compras[i].codigo) {
+                printf("%d x %s (R$%.2f cada) = R$%.2f\n",
+                       compras[i].quantidade, p.nome, p.preco,
+                       p.preco * compras[i].quantidade);
+                break;
+              }
+            }
+            fclose(f);
+          }
+          printf("Total: R$%.2f\n", total);
+        }
+        break;
+
+      default:
+        printf("Opção inválida.\n");
+    }
+  }
+
+  // Atualizar estoque igual antes...
+
+  if (numCompras > 0) {
+    FILE *f = fopen(arquivo, "rb");
+    FILE *temp = fopen("temp.dat", "wb");
+
+    if (!f || !temp) {
+      limparMenu();
+      perror("Erro ao abrir arquivos para atualização");
+      return;
+    }
+
+    while (fread(&p, sizeof(Produto), 1, f)) {
+      for (int i = 0; i < numCompras; i++) {
+        if (p.codigo == compras[i].codigo) {
+          p.quantidade -= compras[i].quantidade;
+        }
+      }
+      fwrite(&p, sizeof(Produto), 1, temp);
+    }
+
+    fclose(f);
+    fclose(temp);
+    remove(arquivo);
+    rename("temp.dat", arquivo);
+
+    limparMenu();
+    printf("\n=== TOTAL A PAGAR: R$%.2f ===\n", total);
+    printf("Venda finalizada com sucesso!\n");
+  } else {
+    limparMenu();
+    printf("Nenhum produto foi vendido.\n");
+  }
+
+  pausar();
+}
+
+
+
+
+
+// Função para pausar o programa
+void pausar() {
+  printf("Pressione Enter para continuar...");
+  getchar(); // Limpa o buffer de entrada
+  getchar(); // Espera o Enter real
+}
+
+
+
+// Função principal
+int main() {
+  // Arquivo em formato binário (dat)
+  char nomeArquivo[] = "estoque.dat";
+  int opcao;
+
+  do {
+    limparMenu();
+      printf("========MENU=======\n1. Adicionar Produto\n2. Listar Produtos\n3. "
+         "Procurar por código\n4. Atualizar Produto\n5. Excluir Produto\n6. "
+         "Realizar Venda\n7. Sair\nDigite uma opção: ");
+    scanf("%d", &opcao);
+    limparMenu();
+
+    switch (opcao) {
+      case 1:
+        adicionarProduto(nomeArquivo);
+        break;
+      case 2:
+        listarProdutos(nomeArquivo);
+        pausar();
+        break;
+      case 3:
+        buscarProdutoPorCodigo(nomeArquivo);
+        break;
+      case 4:
+        atualizarProduto(nomeArquivo);
+        break;
+      case 5:
+        removerProduto(nomeArquivo);
+        break;
+      case 6:
+        realizarVenda(nomeArquivo);
+        break;
+      case 7:
+        printf("Programa encerrado\n");
+        break;
+      default:
+        printf("Opção inválida. Tente novamente.\n");
+        pausar();
+      }
+  } while (opcao != 7);
+
+  return 0;
+}
