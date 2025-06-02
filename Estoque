@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 typedef struct {
   int codigo;
   char nome[50];
@@ -33,11 +32,9 @@ int codigoExiste(const char *arquivo, int codigo) {
       return 1; // Código encontrado
     }
   }
-
   fclose(f);
   return 0; // Código não encontrado
 }
-
 
 // Função para adicionar produto
 void adicionarProduto(const char *arquivo) {
@@ -69,7 +66,6 @@ void adicionarProduto(const char *arquivo) {
     } else {
       printf("❌ Erro ao salvar o produto no arquivo.\n");
     }
-
     pausar();
   }
 
@@ -204,10 +200,8 @@ void buscarProdutoPorCodigo(const char *arquivo) {
   if (!encontrado) {
     printf("Produto com código %d não encontrado.\n", codigo);
   }
-
   pausar();
 }
-
 
 //função para realização de vendas
 void realizarVenda(const char *arquivo) {
@@ -443,18 +437,12 @@ void realizarVenda(const char *arquivo) {
   pausar();
 }
 
-
-
-
-
 // Função para pausar o programa
 void pausar() {
   printf("Pressione Enter para continuar...");
   getchar(); // Limpa o buffer de entrada
   getchar(); // Espera o Enter real
 }
-
-
 
 // Função principal
 int main() {
