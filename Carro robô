@@ -1,3 +1,5 @@
+#include <Dabble.h>
+
 // Pinos do Motor A
 #define IN1 8
 #define IN2 9
@@ -7,46 +9,85 @@
 #define IN4 11
 
 void setup() {
-  // Define os pinos como saída
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
-  // Inicia o monitor serial
   Serial.begin(9600);
-  Serial.println("Sistema iniciado. Motores prontos.");
+
+  // Iniciar o Dabble com a mesma taxa do HC-05
+  Dabble.begin(9600);  
+
+  Serial.println("Bluetooth iniciado. Aguardando comandos...");
+}
+
+void moverFrente() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+
+  Serial.println("Frente");
+}
+
+void moverTras() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+
+  Serial.println("Trás");
+}
+
+void virarEsquerda() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+
+  Serial.println("Esquerda");
+}
+
+void virarDireita() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+
+  Serial.println("Direita");
+}
+
+void pararMotores() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+
+  Serial.println("Parado");
 }
 
 void loop() {
+  Dabble.processInput();   // Atualiza o estado do GamePad
 
-  // Motor A para frente
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, LOW);
-  Serial.println("Motor A: frente");
-
-  // Motor B para frente
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, LOW);
-  Serial.println("Motor B: frente");
-
-  delay(2000); // 2 segundos
-  
-  // Ambos os motores para trás
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, HIGH);
-  Serial.println("Motores: trás");
-  
-  delay(2000);
-
-  // Parar os motores
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, LOW);
-  Serial.println("Motores: parados");
-
-  delay(2000);
+  if (GamePad.isUpPressed()) {
+    moverFrente();
+  }
+  else if (GamePad.isDownPressed()) {
+    moverTras();
+  }
+  else if (GamePad.isLeftPressed()) {
+    virarEsquerda();
+  }
+  else if (GamePad.isRightPressed()) {
+    virarDireita();
+  }
+  else {
+    pararMotores();
+  }
 }
